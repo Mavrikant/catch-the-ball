@@ -1,6 +1,10 @@
-import pygame
+import os
 import sys
-from game_classes import Ball, Bomb, GameLogic, WIDTH, HEIGHT, WHITE, BLACK, RED, PADDLE_WIDTH, PADDLE_HEIGHT
+# Add the project root directory to Python path
+sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+
+import pygame
+from src.game_classes import Ball, Bomb, GameLogic, WIDTH, HEIGHT, WHITE, BLACK, RED, PADDLE_WIDTH, PADDLE_HEIGHT
 
 # Initialize pygame
 pygame.init()
@@ -53,7 +57,6 @@ def show_scoreboard():
     
     for i, score in enumerate(scores[:5]):  # Show top 5 scores
         score_text = font.render(f"{i+1}. {score['name']}: {score['score']}", True, WHITE)
-        screen.blit(score_text, (WIDTH//2 - score_text.get_width()//2, y_offset))
         y_offset += 40
 
 def main():

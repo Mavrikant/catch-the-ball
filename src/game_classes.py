@@ -133,18 +133,16 @@ class GameLogic:
             
         # Update balls
         caught_balls = []
+        missed_balls = []
         for ball in self.balls[:]:
             ball.update()
             if ball.is_caught(self.paddle_x, self.paddle_y):
                 caught_balls.append(ball)
+                self.balls.remove(ball)  # Remove ball immediately when caught
+                self.score += 1  # Update score immediately
             elif ball.is_off_screen():
-                self.balls.remove(ball)
-        
-        # Process caught balls
-        for ball in caught_balls:
-            if ball in self.balls:
-                self.score += 1
-                self.balls.remove(ball)
+                missed_balls.append(ball)
+                self.balls.remove(ball)  # Remove missed ball immediately
 
         # Update bombs
         caught_bombs = []

@@ -1,8 +1,13 @@
+# Add project root to sys.path to fix import issues
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import pytest
 import pygame
 import random
 from unittest.mock import patch, MagicMock
-from game_classes import Ball, Bomb, GameLogic, WIDTH, HEIGHT, BALL_RADIUS, BOMB_RADIUS, PADDLE_WIDTH, BALL_COLORS
+from src.game_classes import Ball, Bomb, GameLogic, WIDTH, HEIGHT, BALL_RADIUS, BOMB_RADIUS, PADDLE_WIDTH, BALL_COLORS
 
 
 # Initialize pygame for tests

@@ -1,6 +1,10 @@
 import pytest
-from unittest.mock import Mock, patch, call
+from unittest.mock import Mock, patch, call, MagicMock
 import sys
+import os
+
+# Add project root to sys.path to fix import issues
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Mock pygame and its constants before importing main
 with patch.dict('sys.modules', {'pygame': Mock()}):
@@ -9,19 +13,32 @@ with patch.dict('sys.modules', {'pygame': Mock()}):
     pygame.K_LEFT = 1073741904
     pygame.K_RIGHT = 1073741903
     pygame.K_SPACE = 32
+    pygame.K_RETURN = 13
+    pygame.K_BACKSPACE = 8
     pygame.QUIT = 256
     pygame.KEYDOWN = 768
     
+    # Create a proper Event class for mocking
+    class MockEvent:
+        def __init__(self, type, **kwargs):
+            self.type = type
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+    
+    # Mock event system
+    pygame.event = MagicMock()
+    pygame.event.Event = MockEvent
+    pygame.event.get = MagicMock(return_value=[])
+    
     # Now import main after pygame is mocked
-    from main import main
-    from game_classes import RED, WHITE, GameLogic
+    from src.main import main
+    from src.game_classes import RED, WHITE, GameLogic
 
 @pytest.fixture
 def mock_pygame():
     with patch('pygame.init') as mock_init, \
          patch('pygame.display.set_mode') as mock_display, \
          patch('pygame.font.Font') as mock_font, \
-         patch('pygame.event.get') as mock_events, \
          patch('pygame.key.get_pressed') as mock_keys, \
          patch('pygame.display.flip') as mock_flip, \
          patch('pygame.quit') as mock_quit, \
@@ -58,7 +75,6 @@ def mock_pygame():
             'init': mock_init,
             'display': mock_display,
             'font': mock_font,
-            'events': mock_events,
             'keys': mock_keys,
             'flip': mock_flip,
             'quit': mock_quit,
@@ -68,8 +84,8 @@ def mock_pygame():
         }
 
 def test_game_quit(mock_pygame):
-    # Simulate quitting the game
-    mock_pygame['events'].return_value = [pygame.event.Event(pygame.QUIT)]
+    # Return an event list with a single quit event
+    pygame.event.get.return_value = [pygame.event.Event(pygame.QUIT)]
     
     with pytest.raises(SystemExit):
         main()
@@ -77,36 +93,36 @@ def test_game_quit(mock_pygame):
     mock_pygame['quit'].assert_called_once()
 
 def test_game_over_restart(mock_pygame):
-    with patch('game_classes.GameLogic') as MockGameLogic:
+    with patch('src.game_classes.GameLogic') as MockGameLogic:
         # Create a mock game instance that's in game over state
         mock_game = Mock()
         mock_game.game_over = True
         mock_game.score = 10
         mock_game.lives = 0
-        mock_game.update_game_state = Mock()  # Prevent state updates
+        mock_game.update_game_state = Mock()
         MockGameLogic.return_value = mock_game
         
-        # Run the game loop for a few frames
-        mock_pygame['events'].side_effect = [
-            [],  # First frame: show game over screen
-            [pygame.event.Event(pygame.QUIT)]  # Second frame: quit
+        # Setup event sequence
+        enter_event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN, unicode="")
+        quit_event = pygame.event.Event(pygame.QUIT)
+        pygame.event.get.side_effect = [
+            [enter_event],  # Complete name input
+            [],  # Game over screen
+            [quit_event]  # Quit game
         ]
         
-        # Run the game until it quits
         with pytest.raises(SystemExit):
             main()
         
-        # Verify that game over text was rendered
         render_method = mock_pygame['font'].return_value.render
         render_calls = render_method.call_args_list
         render_texts = [args[0] for args, kwargs in render_calls]
-        assert any('GAME OVER' in str(text) for text in render_texts), "Game over text was not rendered"
-        assert any('Score' in str(text) for text in render_texts), "Score text was not rendered"
-        assert any('SPACE' in str(text) for text in render_texts), "Restart instruction was not rendered"
+        assert any('GAME OVER' in str(text) for text in render_texts)
+        assert any('Score' in str(text) for text in render_texts)
+        assert any('SPACE' in str(text) for text in render_texts)
 
 def test_paddle_movement(mock_pygame):
-    with patch('game_classes.GameLogic') as MockGameLogic:
-        # Create a mock game instance
+    with patch('src.game_classes.GameLogic') as MockGameLogic:
         mock_game = Mock()
         mock_game.game_over = False
         MockGameLogic.return_value = mock_game
@@ -119,11 +135,15 @@ def test_paddle_movement(mock_pygame):
         }
         mock_pygame['keys'].return_value = key_state
         
-        # Run one frame then quit
-        mock_pygame['events'].return_value = [pygame.event.Event(pygame.QUIT)]
+        # Setup event sequence
+        enter_event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN, unicode="")
+        quit_event = pygame.event.Event(pygame.QUIT)
+        pygame.event.get.side_effect = [
+            [enter_event],  # Complete name input
+            [quit_event]  # Quit game
+        ]
         
         with pytest.raises(SystemExit):
             main()
         
-        # Verify paddle movement was called
         mock_game.move_paddle_left.assert_called_once()
