@@ -90,22 +90,36 @@ class GameLogic:
         self.bomb_spawn_delay = 180
 
     def save_score(self):
-        scores = self.load_scores()
-        scores.append({"name": self.player_name, "score": self.score})
-        scores.sort(key=lambda x: x["score"], reverse=True)
-        scores = scores[:10]  # Keep only top 10 scores
-        
-        with open(SCORES_FILE, "w") as f:
-            json.dump(scores, f)
+        try:
+            # Ensure we can read existing scores first
+            scores = self.load_scores()
+            
+            # Add the new score
+            scores.append({"name": self.player_name, "score": self.score})
+            
+            # Sort and keep top 10
+            scores.sort(key=lambda x: x["score"], reverse=True)
+            scores = scores[:10]
+            
+            # Write back to file
+            with open(SCORES_FILE, "w") as f:
+                json.dump(scores, f, indent=4)  # Added indent for readability
+        except Exception as e:
+            print(f"Error saving score: {e}")  # For debugging
 
     @staticmethod
     def load_scores() -> List[Dict[str, any]]:
-        if not os.path.exists(SCORES_FILE):
-            return []
         try:
+            if not os.path.exists(SCORES_FILE):
+                # Create file with empty array if it doesn't exist
+                with open(SCORES_FILE, "w") as f:
+                    json.dump([], f)
+                return []
+                
             with open(SCORES_FILE, "r") as f:
                 return json.load(f)
-        except:
+        except Exception as e:
+            print(f"Error loading scores: {e}")  # For debugging
             return []
 
     def reset_game(self):

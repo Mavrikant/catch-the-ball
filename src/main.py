@@ -57,6 +57,7 @@ def show_scoreboard():
     
     for i, score in enumerate(scores[:5]):  # Show top 5 scores
         score_text = font.render(f"{i+1}. {score['name']}: {score['score']}", True, WHITE)
+        screen.blit(score_text, (WIDTH//2 - score_text.get_width()//2, y_offset))
         y_offset += 40
 
 def main():
